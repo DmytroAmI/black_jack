@@ -33,6 +33,7 @@ class Card:
 
 class Deck:
     """Define a deck of cards"""
+
     def __init__(self, cards):
         """Initialize the attributes deck of cards"""
         self.cards = cards
@@ -42,7 +43,7 @@ class Deck:
         """Return deck of cards"""
         return self.cards
 
-    def get_card_from_deck(self):
+    def deal_card(self):
         """Take a card from the deck"""
         current_card = self.cards.pop()
         self.cards.insert(0, current_card)
@@ -78,18 +79,22 @@ class Deck:
         return str(self.cards)
 
 
-class Croupier:
+class Dealer:
     """Define a croupier"""
-    def __init__(self, name="Croupier"):
+
+    def __init__(self, name="Dealer"):
         """Initialize the player attributes"""
         self.name = name
         self.hand = []
         self.points = 0
 
-    def add_card_to_hand(self, card):
+    def take_card(self, card):
         """Add a card to the hand and count points"""
         self.hand.append(card)
         self.points += Card.convert_card_to_points(card)
+
+    def show_hand(self):
+        return "".join(card.get_card() for card in self.hand)
 
     def clear(self):
         self.points = 0
@@ -97,11 +102,12 @@ class Croupier:
 
     def __str__(self):
         """Return a string representation of the player"""
-        return f"Croupier {self.name}"
+        return f"Dealer - {self.name}"
 
 
-class Player(Croupier):
+class Player(Dealer):
     """Define a player"""
+
     def __init__(self, name, balance):
         """Initialize the player attributes"""
         super().__init__(name)
@@ -114,77 +120,120 @@ class Player(Croupier):
 
 class Game:
     """Define the game process"""
-    def __init__(self, croupier, player, deck):
+    MIN_BID = 10
+    MAX_BID = 500
+
+    def __init__(self, dealer, player, deck):
         """Initialize the game attributes"""
-        self.croupier = croupier
+        self.dealer = dealer
         self.player = player
         self.deck = deck
 
-    def round(self):
-        """Describe the round of the game"""
+    def take_bid(self):
         while True:
             bid = int(input("Take your bid: "))
             if bid > self.player.balance:
                 print("Your bid was greater than your balance! Take bid again!")
+            elif bid < self.MIN_BID or bid > self.MAX_BID:
+                print("Your bid must be between 10 and 500! Take bid again!")
             else:
-                break
+                return bid
 
-        self.player.add_card_to_hand(self.deck.get_card_from_deck())
-        self.croupier.add_card_to_hand(self.deck.get_card_from_deck())
+    def end_round(self):
+        print("Your hand:\n\t", self.player.show_hand(), "Your points:", {self.player.points})
+        print("Dealer hand:\n\t", self.dealer.show_hand(), "Dealer points:", {self.dealer.points})
+        self.player.clear()
+        self.dealer.clear()
 
-        self.player.add_card_to_hand(self.deck.get_card_from_deck())
-        self.croupier.add_card_to_hand(self.deck.get_card_from_deck())
+    def start_round(self):
+        self.player.take_card(self.deck.deal_card())
+        self.dealer.take_card(self.deck.deal_card())
+
+        self.player.take_card(self.deck.deal_card())
+        self.dealer.take_card(self.deck.deal_card())
+
+        print("Your hand:\n\t", self.player.show_hand())
+        print("Dealer hand:\n\t ??", self.dealer.hand[1])
+
+    def win_round(self, bid):
+        print("Your win!")
+        self.player.balance += bid
+        self.end_round()
+
+    def lose_round(self, bid):
+        print("Your lose!")
+        self.player.balance -= bid
+        self.end_round()
+
+    def result_round(self, bid):
+        if self.player.points > 21:
+            self.lose_round(bid)
+            return
+
+        while self.dealer.points < 17:
+            self.dealer.take_card(self.deck.deal_card())
+            if self.dealer.points > 21:
+                self.win_round(bid)
+                return
+
+        if self.player.points < self.dealer.points:
+            self.lose_round(bid)
+        elif self.player.points > self.dealer.points:
+            self.win_round(bid)
+        else:
+            print("Push!")
+            self.end_round()
+
+    def round(self):
+        """Round the game"""
+        bid = self.take_bid()
+        self.start_round()
+        if self.player.points == 21 and self.dealer.points != 21:
+            print("BlackJack!")
+            self.win_round(bid * 1.5)
+            return
 
         while True:
-            print("Your cards:\n\t", self.player.hand)
-            choice = input("More cards? (y/n): ")
-            if choice == "n":
-                if self.player.points > self.croupier.points:
-                    print("You win!")
-                    print(f"Your points: {self.player.points}, Croupier: {self.croupier.points}")
-                    self.player.balance += bid
-                    self.player.clear()
-                    self.croupier.clear()
-                elif self.player.points < self.croupier.points:
-                    print("You lose!")
-                    print(f"Your points: {self.player.points}, Croupier: {self.croupier.points}")
-                    self.player.balance -= bid
-                    self.player.clear()
-                    self.croupier.clear()
-                else:
-                    print("Draw! Your won!")
-                    print(f"Your points: {self.player.points}, Croupier: {self.croupier.points}")
-                    self.player.balance += bid
-                    self.player.clear()
-                    self.croupier.clear()
-                break
-
-            self.player.add_card_to_hand(self.deck.get_card_from_deck())
-            if not self.croupier.points >= 17:
-                self.croupier.add_card_to_hand(self.deck.get_card_from_deck())
-
-            if self.player.points > 21:
-                print("You lose!\n", self.player.hand)
-                print("Your points:", self.player.points)
-                self.player.balance -= bid
-                self.player.clear()
-                self.croupier.clear()
-                break
-            elif self.croupier.points > 21:
-                print("You win!")
-                print("Croupier points:", self.croupier.points)
-                self.player.balance += bid
-                self.player.clear()
-                self.croupier.clear()
-                break
+            print("1.Hit\n2.Stand\n3.Double Down\n4.Surrender\n")
+            choice = input("Enter your choice: ").strip()
+            match choice:
+                case "1":
+                    self.player.take_card(self.deck.deal_card())
+                    print("Your hand:\n\t", self.player.show_hand())
+                    if self.player.points > 21:
+                        self.lose_round(bid)
+                        break
+                case "2":
+                    self.result_round(bid)
+                    break
+                case "3":
+                    if self.player.balance >= bid * 2:
+                        double_bid = bid * 2
+                        self.player.take_card(self.deck.deal_card())
+                        print("Your hand:\n\t", self.player.show_hand())
+                        self.result_round(double_bid)
+                        break
+                    else:
+                        print("Not enough money to double")
+                case "4":
+                    if len(self.player.hand) == 2:
+                        self.player.balance -= bid / 2
+                        self.player.clear()
+                        self.dealer.clear()
+                        break
+                    else:
+                        print("This option is only available as the first decision.")
+                case _:
+                    print("Invalid input, please try again!")
 
     def play(self):
         """Play the game"""
+
         while self.player.balance:
             choice = input("Continue? (y/n): ")
             if choice == "n":
                 break
 
-            Game.round(self)
+            self.round()
 
         print("Your final score is", self.player.balance)
