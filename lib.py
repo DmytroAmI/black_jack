@@ -3,7 +3,7 @@ import random
 
 class Card:
     """Define a card"""
-    RANKS = "2 3 4 5 6 7 8 9 10 J Q K".split()
+    RANKS = "2 3 4 5 6 7 8 9 10 J Q K A".split()
     SUITS = "♥️ ♠️ ♦️ ♣️".split()
 
     def __init__(self, rank, suit):
@@ -15,39 +15,16 @@ class Card:
         """Return a card as a string"""
         return self.rank + self.suit
 
-    @staticmethod
-    def convert_card_to_points(card):
-        """Convert a card into a points"""
-        if card.get_card()[0] in "JQK" or "10" in card.get_card():
-            return 10
-
-        return int(card.get_card()[0])
-
-    def __str__(self):
+    def __repr__(self):
         """Return a string representation of the card"""
         return f"{self.rank}{self.suit}"
-
-    def __repr__(self):
-        return self.__str__()
 
 
 class Deck:
     """Define a deck of cards"""
-
     def __init__(self, cards):
         """Initialize the attributes deck of cards"""
         self.cards = cards
-        self.index = 0
-
-    def get_cards(self):
-        """Return deck of cards"""
-        return self.cards
-
-    def deal_card(self):
-        """Take a card from the deck"""
-        current_card = self.cards.pop()
-        self.cards.insert(0, current_card)
-        return current_card
 
     @classmethod
     def create_deck(cls, shuffle=False):
@@ -57,22 +34,11 @@ class Deck:
             random.shuffle(cards)
         return cls(cards)
 
-    def __len__(self):
-        """Return the number of cards in the deck"""
-        return len(self.cards)
-
-    def __iter__(self):
-        """Return an iterator"""
-        return iter(self.cards)
-
-    def __next__(self):
-        """Return the next card from the deck"""
-        if self.index >= len(self.cards):
-            raise StopIteration
-
-        result = self.cards[self.index]
-        self.index += 1
-        return result
+    def deal_card(self):
+        """Return a card from the deck"""
+        current_card = self.cards.pop()
+        self.cards.insert(0, current_card)
+        return current_card
 
     def __str__(self):
         """Return a string representation of the deck"""
@@ -80,28 +46,45 @@ class Deck:
 
 
 class Dealer:
-    """Define a croupier"""
-
+    """Define a dealer"""
     def __init__(self, name="Dealer"):
         """Initialize the player attributes"""
         self.name = name
         self.hand = []
         self.points = 0
 
-    def take_card(self, card):
-        """Add a card to the hand and count points"""
-        self.hand.append(card)
-        self.points += Card.convert_card_to_points(card)
-
     def show_hand(self):
+        """Return a string representation of the hand"""
         return "".join(card.get_card() for card in self.hand)
 
-    def clear(self):
+    def count_points(self):
+        """Count the sum of current points"""
         self.points = 0
-        self.hand = []
+        is_a = False
+        count_a = 0
+        for card in self.hand:
+            if "A" in card.get_card():
+                is_a = True
+                count_a += 1
+            elif card.get_card()[0] in "JQK" or "10" in card.get_card():
+                self.points += 10
+            else:
+                self.points += int(card.get_card()[0])
+
+        if is_a:
+            for _ in range(count_a):
+                if 21 - self.points >= 11:
+                    self.points += 11
+                else:
+                    self.points += 1
+
+    def take_card(self, card):
+        """Add card to the hand and count points"""
+        self.hand.append(card)
+        self.count_points()
 
     def __str__(self):
-        """Return a string representation of the player"""
+        """Return a string representation of the dealer"""
         return f"Dealer - {self.name}"
 
 
@@ -130,6 +113,7 @@ class Game:
         self.deck = deck
 
     def take_bid(self):
+        """Take a current bid"""
         while True:
             bid = int(input("Take your bid: "))
             if bid > self.player.balance:
@@ -139,13 +123,8 @@ class Game:
             else:
                 return bid
 
-    def end_round(self):
-        print("Your hand:\n\t", self.player.show_hand(), "Your points:", {self.player.points})
-        print("Dealer hand:\n\t", self.dealer.show_hand(), "Dealer points:", {self.dealer.points})
-        self.player.clear()
-        self.dealer.clear()
-
     def start_round(self):
+        """Start of each round"""
         self.player.take_card(self.deck.deal_card())
         self.dealer.take_card(self.deck.deal_card())
 
@@ -155,17 +134,27 @@ class Game:
         print("Your hand:\n\t", self.player.show_hand())
         print("Dealer hand:\n\t ??", self.dealer.hand[1])
 
+    def end_round(self):
+        """End round"""
+        print("Your hand:\n\t", self.player.show_hand(), "Your points:", {self.player.points})
+        print("Dealer hand:\n\t", self.dealer.show_hand(), "Dealer points:", {self.dealer.points})
+        self.player.hand = []
+        self.dealer.hand = []
+
     def win_round(self, bid):
+        """If player win round"""
         print("Your win!")
         self.player.balance += bid
         self.end_round()
 
     def lose_round(self, bid):
+        """If player lose round"""
         print("Your lose!")
         self.player.balance -= bid
         self.end_round()
 
     def result_round(self, bid):
+        """Results of the round"""
         if self.player.points > 21:
             self.lose_round(bid)
             return
@@ -185,16 +174,20 @@ class Game:
             self.end_round()
 
     def round(self):
-        """Round the game"""
+        """Game round"""
         bid = self.take_bid()
         self.start_round()
+
         if self.player.points == 21 and self.dealer.points != 21:
             print("BlackJack!")
             self.win_round(bid * 1.5)
             return
+        elif self.player.points == 21 and self.dealer.points == 21:
+            print("Push!")
+            self.end_round()
 
         while True:
-            print("1.Hit\n2.Stand\n3.Double Down\n4.Surrender\n")
+            print("1.Hit\n2.Stand\n3.Double Down\n4.Surrender")
             choice = input("Enter your choice: ").strip()
             match choice:
                 case "1":
@@ -218,8 +211,8 @@ class Game:
                 case "4":
                     if len(self.player.hand) == 2:
                         self.player.balance -= bid / 2
-                        self.player.clear()
-                        self.dealer.clear()
+                        self.player.hand = []
+                        self.dealer.hand = []
                         break
                     else:
                         print("This option is only available as the first decision.")
@@ -228,12 +221,10 @@ class Game:
 
     def play(self):
         """Play the game"""
-
         while self.player.balance:
             choice = input("Continue? (y/n): ")
             if choice == "n":
                 break
-
             self.round()
 
         print("Your final score is", self.player.balance)
