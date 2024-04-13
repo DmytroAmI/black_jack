@@ -7,7 +7,7 @@ if __name__ == "__main__":
     dealer = lib.Dealer("Albert")
     player = lib.Player("Dmytro", 500)
 
-    print("{}\n{}".format(dealer, player))
+    print(">>{}\n>>{}".format(dealer, player))
     print(f"\tMin bid is {lib.Game.MIN_BID}\n\tMax bid is {lib.Game.MAX_BID}")
 
     game = lib.Game(dealer, player, deck)

@@ -115,11 +115,16 @@ class Game:
     def take_bid(self):
         """Take a current bid"""
         while True:
-            bid = int(input("Take your bid: "))
+            try:
+                bid = int(input("Take your bid: "))
+            except ValueError:
+                print("\tBid must be a number! Try again!")
+                continue
+
             if bid > self.player.balance:
-                print("Your bid was greater than your balance! Take bid again!")
+                print("\tYour bid was greater than your balance! Take bid again!")
             elif bid < self.MIN_BID or bid > self.MAX_BID:
-                print("Your bid must be between 10 and 500! Take bid again!")
+                print("\tYour bid must be between 10 and 500! Take bid again!")
             else:
                 return bid
 
@@ -185,6 +190,9 @@ class Game:
         elif self.player.points == 21 and self.dealer.points == 21:
             print("Push!")
             self.end_round()
+        elif self.dealer.points == 21 and self.player.points != 21:
+            print("Dealer have BlackJack")
+            self.lose_round(bid)
 
         while True:
             print("1.Hit\n2.Stand\n3.Double Down\n4.Surrender")
@@ -217,14 +225,17 @@ class Game:
                     else:
                         print("This option is only available as the first decision.")
                 case _:
-                    print("Invalid input, please try again!")
+                    print("\tInvalid input, please try again!")
 
     def play(self):
         """Play the game"""
         while self.player.balance:
-            choice = input("Continue? (y/n): ")
+            choice = input("\nContinue? (y/n): ")
             if choice == "n":
                 break
-            self.round()
+            elif choice == "y":
+                self.round()
+            else:
+                print("\t'y' or 'n' is expected")
 
-        print("Your final score is", self.player.balance)
+        print("\nYour final score is", self.player.balance)
