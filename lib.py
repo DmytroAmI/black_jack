@@ -22,6 +22,7 @@ class Card:
 
 class Deck:
     """Define a deck of cards"""
+
     def __init__(self, cards):
         """Initialize the attributes deck of cards"""
         self.cards = cards
@@ -47,6 +48,7 @@ class Deck:
 
 class Dealer:
     """Define a dealer"""
+
     def __init__(self, name="Dealer"):
         """Initialize the player attributes"""
         self.name = name
@@ -91,10 +93,25 @@ class Dealer:
 class Player(Dealer):
     """Define a player"""
 
-    def __init__(self, name, balance):
+    def __init__(self, name):
         """Initialize the player attributes"""
         super().__init__(name)
-        self.balance = balance
+        self.balance = 0
+
+    def replenish(self):
+        """Replenish the balance"""
+        while True:
+            try:
+                up_balance = int(input("Top up your balance: "))
+            except ValueError:
+                print("\tBalance must be a number! Try again!")
+                continue
+
+            if self.balance + up_balance < Game.MIN_BID:
+                print("\tYour balance is lower than minimum casino bid! Try again!")
+            else:
+                self.balance += up_balance
+                return
 
     def __str__(self):
         """Return a string representation of the player"""
@@ -116,7 +133,7 @@ class Game:
         """Take a current bid"""
         while True:
             try:
-                bid = int(input("Take your bid: "))
+                bid = int(input("\tTake your bid: "))
             except ValueError:
                 print("\tBid must be a number! Try again!")
                 continue
@@ -143,6 +160,7 @@ class Game:
         """End round"""
         print("Your hand:\n\t", self.player.show_hand(), "Your points:", {self.player.points})
         print("Dealer hand:\n\t", self.dealer.show_hand(), "Dealer points:", {self.dealer.points})
+        print("Your current balance: ", self.player.balance)
         self.player.hand = []
         self.dealer.hand = []
 
@@ -180,6 +198,10 @@ class Game:
 
     def round(self):
         """Game round"""
+        if self.player.balance < self.MIN_BID:
+            print("\tYour balance lower then min bid! Replenish your balance!!")
+            return
+
         bid = self.take_bid()
         self.start_round()
 
@@ -195,8 +217,7 @@ class Game:
             self.lose_round(bid)
 
         while True:
-            print("1.Hit\n2.Stand\n3.Double Down\n4.Surrender")
-            choice = input("Enter your choice: ").strip()
+            choice = input("1.Hit\n2.Stand\n3.Double Down\n4.Surrender\nEnter your choice: ").strip()
             match choice:
                 case "1":
                     self.player.take_card(self.deck.deal_card())
@@ -219,6 +240,7 @@ class Game:
                 case "4":
                     if len(self.player.hand) == 2:
                         self.player.balance -= bid / 2
+                        print("Your current balance:", self.player.balance)
                         self.player.hand = []
                         self.dealer.hand = []
                         break
@@ -229,13 +251,15 @@ class Game:
 
     def play(self):
         """Play the game"""
-        while self.player.balance:
-            choice = input("\nContinue? (y/n): ")
-            if choice == "n":
-                break
-            elif choice == "y":
-                self.round()
-            else:
-                print("\t'y' or 'n' is expected")
-
-        print("\nYour final score is", self.player.balance)
+        while True:
+            choice = input("\n1.Play round\n2.Replenish the balance\n3.Exit\nEnter your choice: ")
+            match choice:
+                case "1":
+                    self.round()
+                case "2":
+                    self.player.replenish()
+                case "3":
+                    break
+                case _:
+                    print("\tInvalid input, please try again!")
+        print("\n>>Your final balance is", self.player.balance)
